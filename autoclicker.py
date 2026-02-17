@@ -9,11 +9,6 @@ import os
 
 CONFIG_FILE = "config.json"
 running = False
-click_thread = None
-
-# ========================
-# Configuração
-# ========================
 
 def load_config():
     if os.path.exists(CONFIG_FILE):
@@ -24,7 +19,7 @@ def load_config():
         "clicks": 1,
         "button": "left",
         "hotkey": "F8",
-        "fixed_position": False,
+        "fixed": False,
         "timer": 0
     }
 
@@ -34,7 +29,7 @@ def save_config():
         "clicks": int(clicks_entry.get()),
         "button": button_var.get(),
         "hotkey": hotkey_var.get(),
-        "fixed_position": fixed_var.get(),
+        "fixed": fixed_var.get(),
         "timer": int(timer_entry.get())
     }
     with open(CONFIG_FILE, "w") as f:
@@ -42,21 +37,16 @@ def save_config():
 
 config = load_config()
 
-# ========================
-# Auto Click
-# ========================
-
 def click_loop():
     global running
     save_config()
 
     try:
         cps = float(cps_entry.get())
-        clicks_per_action = int(clicks_entry.get())
+        clicks = int(clicks_entry.get())
         button = button_var.get()
         timer = int(timer_entry.get())
     except:
-        status_label.config(text="Valores inválidos!", fg="red")
         return
 
     delay = 1 / cps
@@ -69,43 +59,34 @@ def click_loop():
         if timer > 0 and (time.time() - start_time) >= timer:
             break
 
-        for _ in range(clicks_per_action):
+        for _ in range(clicks):
             if not running:
                 break
-
             if fixed_var.get():
                 pyautogui.click(fixed_pos.x, fixed_pos.y, button=button)
             else:
                 pyautogui.click(button=button)
-
             time.sleep(delay)
 
     running = False
     status_label.config(text="Status: PAUSADO", fg="red")
 
-def toggle_clicking():
-    global running, click_thread
-
-    if not running:
-        running = True
+def toggle():
+    global running
+    running = not running
+    if running:
         status_label.config(text="Status: ATIVO", fg="#00ff88")
-        click_thread = threading.Thread(target=click_loop, daemon=True)
-        click_thread.start()
+        threading.Thread(target=click_loop, daemon=True).start()
     else:
-        running = False
         status_label.config(text="Status: PAUSADO", fg="red")
 
 def set_hotkey():
     keyboard.unhook_all_hotkeys()
-    keyboard.add_hotkey(hotkey_var.get(), toggle_clicking)
-
-# ========================
-# Interface
-# ========================
+    keyboard.add_hotkey(hotkey_var.get(), toggle)
 
 root = tk.Tk()
 root.title("Auto Clicker PRO")
-root.geometry("400x420")
+root.geometry("380x430")
 root.configure(bg="#1e1e1e")
 root.resizable(False, False)
 
@@ -144,11 +125,11 @@ timer_entry = ttk.Entry(root)
 timer_entry.insert(0, config["timer"])
 timer_entry.pack()
 
-fixed_var = tk.BooleanVar(value=config["fixed_position"])
+fixed_var = tk.BooleanVar(value=config["fixed"])
 ttk.Checkbutton(root, text="Usar posição fixa (pega posição ao iniciar)", variable=fixed_var).pack(pady=10)
 
 ttk.Button(root, text="Aplicar Tecla", command=set_hotkey).pack(pady=5)
-ttk.Button(root, text="Iniciar / Pausar", command=toggle_clicking).pack(pady=10)
+ttk.Button(root, text="Iniciar / Pausar", command=toggle).pack(pady=10)
 
 status_label = tk.Label(root, text="Status: PAUSADO", bg="#1e1e1e", fg="red", font=("Arial", 12, "bold"))
 status_label.pack(pady=10)
